@@ -35,9 +35,9 @@ help:
 arch_patch/%: ## apply hardware architecture specific patches to the Dockerfile
 	@if [ -e ./$(notdir $@)/Dockerfile.$(ARCH).patch ]; then \
 		if [ -e ./$(notdir $@)/Dockerfile.orig ]; then \
-               		cp -f ./$(notdir $@)/Dockerfile.orig ./$(notdir $@)/Dockerfile;\
+			cp -f ./$(notdir $@)/Dockerfile.orig ./$(notdir $@)/Dockerfile;\
 		else\
-                	cp -f ./$(notdir $@)/Dockerfile ./$(notdir $@)/Dockerfile.orig;\
+			cp -f ./$(notdir $@)/Dockerfile ./$(notdir $@)/Dockerfile.orig;\
 		fi;\
 		patch -f ./$(notdir $@)/Dockerfile ./$(notdir $@)/Dockerfile.$(ARCH).patch; \
 	fi
