@@ -7,12 +7,14 @@ SHELL:=bash
 OWNER:=jupyter
 ARCH:=$(shell uname -m)
 DIFF_RANGE?=master...HEAD
-
+ifneq ($(DARGS),)
+DARGS:=$(strip $(DARGS)) # add whitespace
+endif
 # Need to list the images in build dependency order
 ifeq ($(ARCH),ppc64le)
-ALL_STACKS:=base-notebook
+ALL_IMAGES:=base-notebook
 else
-ALL_STACKS:=base-notebook \
+ALL_IMAGES:=base-notebook \
 	minimal-notebook \
 	r-notebook \
 	scipy-notebook \
@@ -21,8 +23,6 @@ ALL_STACKS:=base-notebook \
 	pyspark-notebook \
 	all-spark-notebook
 endif
-
-ALL_IMAGES:=$(ALL_STACKS)
 
 help:
 # http://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
@@ -42,9 +42,13 @@ arch_patch/%: ## apply hardware architecture specific patches to the Dockerfile
 		patch -f ./$(notdir $@)/Dockerfile ./$(notdir $@)/Dockerfile.$(ARCH).patch; \
 	fi
 
-build/%: DARGS?=
-build/%: ## build the latest image for a stack
-	docker build $(DARGS) --rm --force-rm -t $(OWNER)/$(notdir $@):latest ./$(notdir $@)
+%/Dockerfile: %/Dockerfile.in Dockerfile.gat
+	cat $< Dockerfile.gat > $@
+
+.SECONDARY: $(ALL_IMAGES:%=%/Dockerfile)
+
+build/%: %/Dockerfile
+	docker build $(DARGS)--rm --force-rm -t $(OWNER)/$(notdir $@):latest ./$(notdir $@)
 
 build-all: $(foreach I,$(ALL_IMAGES),arch_patch/$(I) build/$(I) ) ## build all stacks
 build-test-all: $(foreach I,$(ALL_IMAGES),arch_patch/$(I) build/$(I) test/$(I) ) ## build and test all stacks
@@ -63,10 +67,9 @@ cont-rm-all: ## remove all containers
 	-docker rm --force $(shell docker ps -a -q) 2> /dev/null
 
 dev/%: ARGS?=
-dev/%: DARGS?=
 dev/%: PORT?=8888
 dev/%: ## run a foreground container for a stack
-	docker run -it --rm -p $(PORT):8888 $(DARGS) $(OWNER)/$(notdir $@) $(ARGS)
+	docker run -it --rm -p $(PORT):8888 $(DARGS)$(OWNER)/$(notdir $@) $(ARGS)
 
 dev-env: ## install libraries required to build docs and run tests
 	pip install -r requirements-dev.txt
@@ -95,17 +98,14 @@ n-docs-diff: ## number of docs/ files changed since branch from master
 n-other-diff: ## number of files outside docs/ changed since branch from master
 	@git diff --name-only $(DIFF_RANGE) -- ':!docs/' | wc -l | awk '{print $$1}'
 
-pull/%: DARGS?=
 pull/%: ## pull a jupyter image
-	docker pull $(DARGS) $(OWNER)/$(notdir $@)
+	docker pull $(DARGS)$(OWNER)/$(notdir $@)
 
-run/%: DARGS?=
 run/%: ## run a bash in interactive mode in a stack
-	docker run -it --rm $(DARGS) $(OWNER)/$(notdir $@) $(SHELL)
+	docker run -it --rm $(DARGS)$(OWNER)/$(notdir $@) $(SHELL)
 
-run-sudo/%: DARGS?=
 run-sudo/%: ## run a bash in interactive mode as root in a stack
-	docker run -it --rm -u root $(DARGS) $(OWNER)/$(notdir $@) $(SHELL)
+	docker run -it --rm -u root $(DARGS)$(OWNER)/$(notdir $@) $(SHELL)
 
 tx-en: ## rebuild en locale strings and push to master (req: GH_TOKEN)
 	@git config --global user.email "travis@travis-ci.org"
