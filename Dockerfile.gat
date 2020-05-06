@@ -16,6 +16,3 @@ RUN \
   && ln -s /opt/gsutil/gsutil /usr/local/bin
 USER $NB_UID
 WORKDIR $HOME
-ARG NOTEBOOK
-COPY ./$NOTEBOOK .
-CMD [ "start.sh", "jupyter", "nbconvert", "--to", "notebook", "--execute", "$NOTEBOOK" ]
