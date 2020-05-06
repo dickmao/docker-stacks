@@ -4,7 +4,7 @@
 
 # Use bash for inline if-statements in arch_patch target
 SHELL:=bash
-OWNER:=jupyter
+OWNER:=gat
 ARCH:=$(shell uname -m)
 DIFF_RANGE?=master...HEAD
 ifneq ($(DARGS),)
@@ -42,12 +42,12 @@ arch_patch/%: ## apply hardware architecture specific patches to the Dockerfile
 		patch -f ./$(notdir $@)/Dockerfile ./$(notdir $@)/Dockerfile.$(ARCH).patch; \
 	fi
 
-%/Dockerfile: %/Dockerfile.in Dockerfile.gat
-	cat $< Dockerfile.gat > $@
+.SECONDEXPANSION:
+$(ALL_IMAGES:%=%/Dockerfile): $$(@D)/Dockerfile.in Dockerfile.gat
+	cat $^ > $@
 
-.SECONDARY: $(ALL_IMAGES:%=%/Dockerfile)
-
-build/%: %/Dockerfile
+.PHONY: $(ALL_IMAGES:%=build/%)
+$(ALL_IMAGES:%=build/%): $$(@F)/Dockerfile
 	docker build $(DARGS)--rm --force-rm -t $(OWNER)/$(notdir $@):latest ./$(notdir $@)
 
 build-all: $(foreach I,$(ALL_IMAGES),arch_patch/$(I) build/$(I) ) ## build all stacks
