@@ -48,7 +48,7 @@ $(ALL_IMAGES:%=%/Dockerfile): $$(@D)/Dockerfile.in Dockerfile.gat
 
 .PHONY: $(ALL_IMAGES:%=build/%)
 $(ALL_IMAGES:%=build/%): $$(@F)/Dockerfile
-	docker build $(DARGS)--rm --force-rm -t $(OWNER)/$(notdir $@):latest ./$(notdir $@)
+	(todel=$$(docker image ls --format='{{.ID}}' $(OWNER)/$(@F):latest 2>/dev/null) ; docker build $(DARGS)--rm --force-rm -t $(OWNER)/$(@F):latest ./$(@F) ; inspect=$$(docker image inspect $(OWNER)/$(@F):latest 2>/dev/null); if [ ! -z "$$todel" ] && [ ! -z "$$inspect" ] && ! ( echo "$$inspect" | grep -q "$$todel" ) ; then docker rmi "$$todel" ; fi)
 
 build-all: $(foreach I,$(ALL_IMAGES),arch_patch/$(I) build/$(I) ) ## build all stacks
 build-test-all: $(foreach I,$(ALL_IMAGES),arch_patch/$(I) build/$(I) test/$(I) ) ## build and test all stacks
